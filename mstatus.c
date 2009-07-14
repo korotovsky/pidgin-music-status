@@ -16,7 +16,7 @@
 #include <debug.h>
 #include <plugin.h>
 
-static PurpleCmdId bash, qdb;
+static PurpleCmdId mstatus;
 
 static PurpleCmdRet putstatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data) {
 	GString *msgstr = NULL;
@@ -42,7 +42,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
 	PurpleCmdFlag flags = PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT |	PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS;
 	mstatus_help = _("blablabla");
 	mstatus = purple_cmd_register("m", "w", PURPLE_CMD_P_PLUGIN, flags, NULL,
-							PURPLE_CMD_FUNC(putstatus), bash_help, NULL);
+							PURPLE_CMD_FUNC(putstatus), mstatus_help, NULL);
 	return TRUE;
 }
 
@@ -51,7 +51,7 @@ static gboolean plugin_unload(PurplePlugin *plugin) {
 	return TRUE;
 }
 
-static PurplePluginInfo bash_info =
+static PurplePluginInfo mstatus_info =
 {
 	PURPLE_PLUGIN_MAGIC, /* magic, my ass */
 	PURPLE_MAJOR_VERSION,
@@ -95,4 +95,4 @@ static void init_plugin(PurplePlugin *plugin) {
 	return;
 }
 
-PURPLE_INIT_PLUGIN(bash, init_plugin, mstatus_info)
+PURPLE_INIT_PLUGIN(mstatus, init_plugin, mstatus_info)
