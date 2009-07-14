@@ -19,6 +19,20 @@
 #define INTERVAL 10000
 #define DBUS_TIMEOUT 100
 
+#define STRLEN 100
+
+struct TrackInfo
+{ 
+    char track[STRLEN];
+    char artist[STRLEN];
+    char album[STRLEN];
+    char player[STRLEN];
+    int status;
+    int totalSecs;
+    int currentSecs;
+};
+
+
 gboolean get_hash_str(GHashTable *table, const char *key, char *dest) {
 	GValue* value = (GValue*) g_hash_table_lookup(table, key);
 	if (value != NULL && G_VALUE_HOLDS_STRING(value)) {
