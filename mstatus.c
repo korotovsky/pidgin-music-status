@@ -93,9 +93,11 @@ static gboolean get_rhythmbox_info(struct TrackInfo* ti) {
 }
 
 static PurpleCmdRet SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data) {
+	struct TrackInfo *ti;
 	GString *msgstr = NULL;
+	get_rhythmbox_info(ti);
 	msgstr = g_string_new("");
-	g_string_append(msgstr, "21341234");
+	g_string_append(msgstr, ti->album);
 	switch(purple_conversation_get_type(conv)) {
 		case PURPLE_CONV_TYPE_IM:
 			purple_conv_im_send(PURPLE_CONV_IM(conv), msgstr->str);
