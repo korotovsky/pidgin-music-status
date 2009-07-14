@@ -6,7 +6,7 @@
 #include <cmds.h>
 #include <conversation.h>
 #include <dbus/dbus-glib.h>
-
+#include "notify.h"
 #include "plugin.h"
 #include "version.h"
 
@@ -22,16 +22,15 @@
 #define STRLEN 100
 
 struct TrackInfo
-{ 
-    char track[STRLEN];
-    char artist[STRLEN];
-    char album[STRLEN];
-    char player[STRLEN];
-    int status;
-    int totalSecs;
-    int currentSecs;
+{
+	char track[STRLEN];
+	char artist[STRLEN];
+	char album[STRLEN];
+	const char* player;
+	int status;
+	int totalSecs;
+	int currentSecs;
 };
-
 
 gboolean get_hash_str(GHashTable *table, const char *key, char *dest) {
 	GValue* value = (GValue*) g_hash_table_lookup(table, key);
@@ -50,11 +49,18 @@ unsigned int get_hash_uint(GHashTable *table, const char *key) {
 	return 0;
 }
 
-static gboolean get_rhythmbox_info(struct TrackInfo* ti) {
+static PurpleCmdRet SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data) {
 	DBusGConnection *connection;
 	DBusGProxy *player, *shell;
 	GError *error = 0;
-	connection = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+	GString *msgstr = NULL;
+	struct TrackInfo *ti;
+	msgstr = g_string_new("");
+	g_string_append(msgstr, ti->track);
+	g_string_append(msgstr, ti->album);
+	g_string_append(msgstr, ti->artist);
+
+	connection = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
 	if (connection == NULL) {
 		g_error_free (error);
 		return FALSE;
@@ -95,6 +101,11 @@ static gboolean get_rhythmbox_info(struct TrackInfo* ti) {
 			return FALSE;
 		}
 	}
+	g_free(uri);
+	if (playing)
+		ti->status = STATUS_NORMAL;
+	else
+		ti->status = STATUS_PAUSED;
 	if (!get_hash_str(table, "rb:stream-song-title", ti->track)) {
 		get_hash_str(table, "title", ti->track);
 	}        
@@ -103,15 +114,12 @@ static gboolean get_rhythmbox_info(struct TrackInfo* ti) {
 	ti->totalSecs = get_hash_uint(table, "duration");
 	g_hash_table_destroy(table);
 
-	return TRUE;
-}
+	if (!dbus_g_proxy_call_with_timeout(player, "getElapsed", DBUS_TIMEOUT, &error,
+				G_TYPE_INVALID,
+				G_TYPE_UINT, &ti->currentSecs,
+				G_TYPE_INVALID)) {
+	}
 
-static PurpleCmdRet SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data) {
-	struct TrackInfo *ti;
-	GString *msgstr = NULL;
-	get_rhythmbox_info(ti);
-	msgstr = g_string_new("");
-	g_string_append(msgstr, ti->album);
 	switch(purple_conversation_get_type(conv)) {
 		case PURPLE_CONV_TYPE_IM:
 			purple_conv_im_send(PURPLE_CONV_IM(conv), msgstr->str);
@@ -133,6 +141,7 @@ static gboolean LoadPlugin(PurplePlugin *plugin) {
 	PurpleCmdFlag flags = PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT |	PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS;
 	mstatus = purple_cmd_register("m", "w", PURPLE_CMD_P_PLUGIN, flags, NULL,
 							PURPLE_CMD_FUNC(SetStatus), NULL, NULL);
+
 	return TRUE;
 }
 
