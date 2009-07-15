@@ -6,11 +6,10 @@
 #include <cmds.h>
 #include <conversation.h>
 #include <dbus/dbus-glib.h>
-#include "notify.h"
+
 #include "plugin.h"
 #include "version.h"
 #include <assert.h>
-#include <gtkconv.h>
 
 #define PLUGIN_ID "core-mStatus"
 #define PREF_LOG TRUE
@@ -35,13 +34,10 @@ struct TrackInfo
 	int currentSecs;
 };
 
-/* Trace a debugging message. Writes to log file as well as purple
- * debug sink.
- */
 void
 trace(const char *str, ...)
 {
-	char buf[512];
+	char buf[512]; /*Log buffer*/
 	va_list ap;
 	va_start(ap, str);
 	vsnprintf(buf, 512, str, ap);
@@ -57,17 +53,17 @@ trace(const char *str, ...)
 	purple_debug_info(PLUGIN_ID, "%s\n", buf);
 }
 
-gboolean get_hash_str(GHashTable *table, const char *key, char *dest) {
+gboolean GHashStr(GHashTable *table, const char *key, char *dest) {
 	GValue* value = (GValue*) g_hash_table_lookup(table, key);
 	if (value != NULL && G_VALUE_HOLDS_STRING(value)) {
 		strncpy(dest, g_value_get_string(value), STRLEN-1);
-                return TRUE;
+		return TRUE;
 	}
-        return FALSE;
+		return FALSE;
 }
 
 unsigned int
-get_hash_uint(GHashTable *table, const char *key)
+GHashUnit(GHashTable *table, const char *key)
 {
 	GValue* value = (GValue*) g_hash_table_lookup(table, key);
 	if (value != NULL && G_VALUE_HOLDS_UINT(value)) {
@@ -77,7 +73,7 @@ get_hash_uint(GHashTable *table, const char *key)
 }
 
 gboolean
-get_rhythmbox_info(struct TrackInfo* ti)
+GRhInfo(struct TrackInfo* ti)
 {
 	DBusGConnection *connection;
 	DBusGProxy *player, *shell;
@@ -85,7 +81,7 @@ get_rhythmbox_info(struct TrackInfo* ti)
 
 	connection = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
 	if (connection == NULL) {
-		trace("Failed to open connection to dbus: %s\n", error->message);
+		trace("Ошибка при открытии соединения с dbus: %s\n", error->message);
 		g_error_free (error);
 		return FALSE;
 	}
@@ -104,7 +100,7 @@ get_rhythmbox_info(struct TrackInfo* ti)
 				G_TYPE_INVALID,
 				G_TYPE_BOOLEAN, &playing,
 				G_TYPE_INVALID)) {
-		trace("Failed to get playing state from rhythmbox dbus (%s). Assuming player is off", error->message);
+		trace("Ошибка при получении статуса rhythmbox dbus (%s). Возможно, плеер не запущен.", error->message);
 		ti->status = STATUS_OFF;
 		return TRUE;
 	}
@@ -114,21 +110,21 @@ get_rhythmbox_info(struct TrackInfo* ti)
 				G_TYPE_INVALID,
 				G_TYPE_STRING, &uri,
 				G_TYPE_INVALID)) {
-		trace("Failed to get song uri from rhythmbox dbus (%s)", error->message);
+		trace("Ошибка при получении uri из rhythmbox dbus (%s)", error->message);
 		return FALSE;
 	}
 
 	GHashTable *table;
-	if (!dbus_g_proxy_call_with_timeout(shell, "getSongProperties", DBUS_TIMEOUT, &error,
-				G_TYPE_STRING, uri,
-				G_TYPE_INVALID, 
-				dbus_g_type_get_map("GHashTable", G_TYPE_STRING, G_TYPE_VALUE),	&table,
-				G_TYPE_INVALID)) {
+	if(!dbus_g_proxy_call_with_timeout(shell, "getSongProperties", DBUS_TIMEOUT, &error,
+			G_TYPE_STRING, uri,
+			G_TYPE_INVALID, 
+			dbus_g_type_get_map("GHashTable", G_TYPE_STRING, G_TYPE_VALUE),	&table,
+			G_TYPE_INVALID)) {
 		if (!playing) {
 			ti->status = STATUS_OFF;
 			return TRUE;
 		} else {
-			trace("Failed to get song info from rhythmbox dbus (%s)", error->message);
+			trace("Ошибка при получении информации о песне из rhythmbox dbus (%s)", error->message);
 			return FALSE;
 		}
 	}
@@ -139,21 +135,19 @@ get_rhythmbox_info(struct TrackInfo* ti)
 	else
 		ti->status = STATUS_PAUSED;
 
-	if (!get_hash_str(table, "rb:stream-song-title", ti->track))
-	{
-		get_hash_str(table, "title", ti->track);
-
+	if (!GHashStr(table, "rb:stream-song-title", ti->track)) {
+		GHashStr(table, "title", ti->track);
 	}       
  
-	get_hash_str(table, "artist", ti->artist);
-	get_hash_str(table, "album", ti->album);
-	ti->totalSecs = get_hash_uint(table, "duration");
+	GHashStr(table, "artist", ti->artist);
+	GHashStr(table, "album", ti->album);
+	ti->totalSecs = GHashUnit(table, "duration");
 	g_hash_table_destroy(table);
 	if (!dbus_g_proxy_call_with_timeout(player, "getElapsed", DBUS_TIMEOUT, &error,
 				G_TYPE_INVALID,
 				G_TYPE_UINT, &ti->currentSecs,
 				G_TYPE_INVALID)) {
-		trace("Failed to get elapsed time from rhythmbox dbus (%s)", error->message);
+		trace("Ошибка при получении оставшегося времени проигрывания из rhythmbox dbus (%s)", error->message);
 	}
 	return TRUE;
 }
@@ -161,20 +155,23 @@ get_rhythmbox_info(struct TrackInfo* ti)
 static PurpleCmdRet 
 SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data)
 {
-	char buffer[512];
+	char buff[512]; /*Status buffer*/
+	char bufs[512]; /*Status buffer*/
 	struct TrackInfo ti;
 	DBusGConnection *connection;
 	DBusGProxy *player, *shell;
 	GString *msgstr = NULL;
+	GRhInfo(&ti);
+
 	msgstr = g_string_new("");
-	get_rhythmbox_info(&ti);
 	//sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+	sprintf(buff, "/me is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
 
-	sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+	//g_string_append(msgstr, "\x01");
+	g_string_append(msgstr, buff);
+	//g_string_append(msgstr, "\x01");
 
-	g_string_append(msgstr, "\x01");
-	g_string_append(msgstr, buffer);
-	g_string_append(msgstr, "\x01");
+	printf(bufs, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
 
 	switch(purple_conversation_get_type(conv)) {
     case PURPLE_CONV_TYPE_IM:
