@@ -10,6 +10,7 @@
 #include "plugin.h"
 #include "version.h"
 #include <assert.h>
+#include <gtkconv.h>
 
 #define PLUGIN_ID "core-mStatus"
 #define PREF_LOG TRUE
@@ -160,18 +161,22 @@ get_rhythmbox_info(struct TrackInfo* ti)
 static PurpleCmdRet 
 SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data)
 {
-	char buffer[1024];
+	char buffer[512];
 	struct TrackInfo ti;
 	DBusGConnection *connection;
 	DBusGProxy *player, *shell;
 	GString *msgstr = NULL;
-
-	get_rhythmbox_info(&ti);
-
 	msgstr = g_string_new("");
-	sprintf(buffer, "/me ::: %s ::: %s ::: %s :::", ti.track, ti.artist, ti.album);
+	get_rhythmbox_info(&ti);
+	//sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+
+	sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+
+	g_string_append(msgstr, "\x01");
 	g_string_append(msgstr, buffer);
-  switch(purple_conversation_get_type(conv)) {
+	g_string_append(msgstr, "\x01");
+
+	switch(purple_conversation_get_type(conv)) {
     case PURPLE_CONV_TYPE_IM:
       purple_conv_im_send(PURPLE_CONV_IM(conv), msgstr->str);
       break;
@@ -182,6 +187,7 @@ SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error
       g_string_free(msgstr, TRUE);
       return PURPLE_CMD_RET_FAILED;
   }
+
   g_string_free(msgstr, TRUE);
   return PURPLE_CMD_RET_OK;
 }
