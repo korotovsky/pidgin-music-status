@@ -8,7 +8,7 @@ LDFLAGS+=`pkg-config --libs pidgin`
 LDFLAGS+=`pkg-config --libs dbus-1 dbus-glib-1`
 
 mstatus.so: mstatus.o
-	gcc $(LDFLAGS) -shared -g -o $@ $?
+	gcc $(LDFLAGS) -shared -Wall -O3 -g -o $@ $?
 
 mstatus.o: mstatus.c
 	gcc -c $(CFLAGS) -g -o $@ $?
