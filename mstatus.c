@@ -155,37 +155,47 @@ GRhInfo(struct TrackInfo* ti)
 static PurpleCmdRet 
 SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data)
 {
-	char buff[512]; /*Status buffer*/
-	char bufs[512]; /*Status buffer*/
+	//char buff[512]; /*Status buffer*/
+	//char bufs[512]; /*Status buffer*/
+    gchar *buff;
+    gchar *msgstr;
+
 	struct TrackInfo ti;
 	DBusGConnection *connection;
 	DBusGProxy *player, *shell;
-	GString *msgstr = NULL;
+	//GString *msgstr = NULL;
+
 	GRhInfo(&ti);
 
-	msgstr = g_string_new("");
 	//sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
-	sprintf(buff, "/me is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+
+	//buff = g_strconcat("\x01/me is now listening to ", ti.track, " — ", ti.artist, "[rhythmbox]\x01", NULL);
+	buff = g_strconcat("/me ACTION is now listening to ", "Lala", " — ", "lala", "[rhythmbox]", NULL);
+    //buff = g_strdup("/help");
+    g_printf("%s", buff);
 
 	//g_string_append(msgstr, "\x01");
-	g_string_append(msgstr, buff);
+	//g_string_append(msgstr, buff);
 	//g_string_append(msgstr, "\x01");
 
-	printf(bufs, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+	//printf(bufs, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
 
 	switch(purple_conversation_get_type(conv)) {
     case PURPLE_CONV_TYPE_IM:
-      purple_conv_im_send(PURPLE_CONV_IM(conv), msgstr->str);
+      //purple_conv_im_send(PURPLE_CONV_IM(conv), buff);
+      purple_conv_im_send_with_flags(PURPLE_CONV_IM(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
       break;
     case PURPLE_CONV_TYPE_CHAT:
-      purple_conv_chat_send(PURPLE_CONV_CHAT(conv), msgstr->str);
+      //purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buff);
+      purple_conv_chat_send_with_flags(PURPLE_CONV_CHAT(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
       break;
     default:
-      g_string_free(msgstr, TRUE);
+      g_free(buff);
       return PURPLE_CMD_RET_FAILED;
   }
 
-  g_string_free(msgstr, TRUE);
+    g_free(buff);
+  //g_string_free(msgstr, TRUE);
   return PURPLE_CMD_RET_OK;
 }
 
