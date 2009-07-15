@@ -190,7 +190,16 @@ SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error
       break;
     case PURPLE_CONV_TYPE_CHAT:
       //purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buff);
-      purple_conv_chat_send_with_flags(PURPLE_CONV_CHAT(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
+
+			/*if (!strncmp(cur, "ACTION ", 7)) {
+				cur += 7;
+				buf = g_strdup_printf("/me %s", cur);
+				buf[strlen(buf) - 1] = '\0';
+			}*/
+			buff = g_strconcat("\x01", "ACTION is now listening to ", ti.track, " — ", ti.artist, " [rhythmbox]", "\x01", NULL);
+				g_printf("%s", buff);
+      //purple_conv_chat_send_with_flags(PURPLE_CONV_CHAT(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
+			purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buff);
       break;
     default:
       g_free(buff);
