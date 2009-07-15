@@ -170,9 +170,9 @@ SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error
 	//sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
 
 	//buff = g_strconcat("\x01/me is now listening to ", ti.track, " — ", ti.artist, "[rhythmbox]\x01", NULL);
-	buff = g_strconcat("/me ACTION is now listening to ", "Lala", " — ", "lala", "[rhythmbox]", NULL);
+	//buff = g_strconcat("/me ACTION is now listening to ", "Lala", " — ", "lala", "[rhythmbox]", NULL);
     //buff = g_strdup("/help");
-    g_printf("%s", buff);
+   // g_printf("%s", buff);
 
 	//g_string_append(msgstr, "\x01");
 	//g_string_append(msgstr, buff);
@@ -183,7 +183,10 @@ SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error
 	switch(purple_conversation_get_type(conv)) {
     case PURPLE_CONV_TYPE_IM:
       //purple_conv_im_send(PURPLE_CONV_IM(conv), buff);
-      purple_conv_im_send_with_flags(PURPLE_CONV_IM(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
+			buff = g_strconcat("/me is now listening to ", ti.track, " — ", ti.artist, " [rhythmbox]", NULL);
+				g_printf("%s", buff);
+      //purple_conv_im_send_with_flags(PURPLE_CONV_IM(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
+      purple_conv_im_send(PURPLE_CONV_IM(conv), buff);
       break;
     case PURPLE_CONV_TYPE_CHAT:
       //purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buff);
