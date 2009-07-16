@@ -34,25 +34,6 @@ struct TrackInfo
 	int currentSecs;
 };
 
-void
-trace(const char *str, ...)
-{
-	char buf[512]; /*Log buffer*/
-	va_list ap;
-	va_start(ap, str);
-	vsnprintf(buf, 512, str, ap);
-	va_end(ap);
-
-	FILE *log = fopen("/tmp/mstatus.log", "a");
-	assert(log);
-	time_t t;
-	time(&t);
-	fprintf(log, "%s: %s\n", ctime(&t), buf);
-	fclose(log);
-
-	purple_debug_info(PLUGIN_ID, "%s\n", buf);
-}
-
 gboolean GHashStr(GHashTable *table, const char *key, char *dest) {
 	GValue* value = (GValue*) g_hash_table_lookup(table, key);
 	if (value != NULL && G_VALUE_HOLDS_STRING(value)) {
@@ -81,7 +62,6 @@ GRhInfo(struct TrackInfo* ti)
 
 	connection = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
 	if (connection == NULL) {
-		trace("Ошибка при открытии соединения с dbus: %s\n", error->message);
 		g_error_free (error);
 		return FALSE;
 	}
@@ -100,7 +80,6 @@ GRhInfo(struct TrackInfo* ti)
 				G_TYPE_INVALID,
 				G_TYPE_BOOLEAN, &playing,
 				G_TYPE_INVALID)) {
-		trace("Ошибка при получении статуса rhythmbox dbus (%s). Возможно, плеер не запущен.", error->message);
 		ti->status = STATUS_OFF;
 		return TRUE;
 	}
@@ -110,7 +89,6 @@ GRhInfo(struct TrackInfo* ti)
 				G_TYPE_INVALID,
 				G_TYPE_STRING, &uri,
 				G_TYPE_INVALID)) {
-		trace("Ошибка при получении uri из rhythmbox dbus (%s)", error->message);
 		return FALSE;
 	}
 
@@ -124,7 +102,6 @@ GRhInfo(struct TrackInfo* ti)
 			ti->status = STATUS_OFF;
 			return TRUE;
 		} else {
-			trace("Ошибка при получении информации о песне из rhythmbox dbus (%s)", error->message);
 			return FALSE;
 		}
 	}
@@ -147,67 +124,61 @@ GRhInfo(struct TrackInfo* ti)
 				G_TYPE_INVALID,
 				G_TYPE_UINT, &ti->currentSecs,
 				G_TYPE_INVALID)) {
-		trace("Ошибка при получении оставшегося времени проигрывания из rhythmbox dbus (%s)", error->message);
 	}
 	return TRUE;
 }
 
 static PurpleCmdRet 
-SetStatus(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar *error, void *data)
+SetStatus(PurpleConversation *conv, PurplePlugin *plugin,
+					const gchar *cmd, gchar **args, gchar *error, void *data)
 {
-	//char buff[512]; /*Status buffer*/
-	//char bufs[512]; /*Status buffer*/
-    gchar *buf;
-    gchar *buff;
-    gchar *msgstr;
-	const char *cur;
-	struct TrackInfo ti;
+	PurpleAccount *account = NULL;
+	PurpleConnection *gc = NULL;
 	DBusGConnection *connection;
-	DBusGProxy *player, *shell;
-	//GString *msgstr = NULL;
+
+	gchar *buffer = NULL;
+
+	struct TrackInfo ti;
 
 	GRhInfo(&ti);
 
-	//sprintf(buffer, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+	/* Verify for irc protocol */
+	gc = purple_conversation_get_gc(conv);
+	account = purple_connection_get_account(gc);
+	if(strcmp("prpl-irc", purple_account_get_protocol_id(account)))
+		return;
 
-	//buff = g_strconcat("\x01/me is now listening to ", ti.track, " — ", ti.artist, "[rhythmbox]\x01", NULL);
-	//buff = g_strconcat("/me ACTION is now listening to ", "Lala", " — ", "lala", "[rhythmbox]", NULL);
-    //buff = g_strdup("/help");
-   // g_printf("%s", buff);
+	/* format string */
+	switch(ti.status) {
+		case STATUS_NORMAL: {
+			buffer = g_strconcat("\001", "ACTION is now listening to ", ti.track, " — ", ti.artist, " [rhythmbox]", "\001", NULL);
+				g_printf("%s", buffer);
+			break;
+		} 
+		case STATUS_PAUSED: {
+			buffer = g_strconcat("\001", "ACTION is now paused [rhythmbox]", "\001", NULL);
+				g_printf("%s", buffer);
+			break;
+		}
+		case STATUS_OFF: {
+			buffer = g_strconcat("\001", "ACTION is now not running [rhythmbox]", "\001", NULL);
+				g_printf("%s", buffer);
+			break;
+		}
+	}
 
-	//g_string_append(msgstr, "\x01");
-	//g_string_append(msgstr, buff);
-	//g_string_append(msgstr, "\x01");
+	/* debug */
+	/*purple_notify_message(plugin, PURPLE_NOTIFY_MSG_INFO, "Debug!",
+												buffer, NULL, NULL, NULL);*/
 
-	//printf(bufs, "ACTION is now listening to %s — %s [rhythmbox]", ti.track, ti.artist);
+	/* Send */
+	purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buffer);
 
-	switch(purple_conversation_get_type(conv)) {
-    case PURPLE_CONV_TYPE_IM:
-      //purple_conv_im_send(PURPLE_CONV_IM(conv), buff);
-			buff = g_strconcat("/me is now listening to ", ti.track, " — ", ti.artist, " [rhythmbox]", NULL);
-				g_printf("%s", buff);
-      //purple_conv_im_send_with_flags(PURPLE_CONV_IM(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
-      purple_conv_im_send(PURPLE_CONV_IM(conv), buff);
-      break;
-    case PURPLE_CONV_TYPE_CHAT:
-      //purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buff);
-			buf = g_strconcat("\001", "ACTION is now listening to ", ti.track, " — ", ti.artist, " [rhythmbox]", "\001", NULL);
-				g_printf("%s", buf);
-			//buff = g_strconcat("\x01", "ACTION is now listening to ", ti.track, " — ", ti.artist, " [rhythmbox]", "\x01", NULL);
-			//	g_printf("%s", buff);
-      //purple_conv_chat_send_with_flags(PURPLE_CONV_CHAT(conv), buff, PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_SYSTEM );
-			purple_conv_chat_send(PURPLE_CONV_CHAT(conv), buf);
-      break;
-    default:
-      g_free(buff);
-      return PURPLE_CMD_RET_FAILED;
-  }
+	/* clean mem */
+	g_free(buffer);
 
-    g_free(buff);
-  //g_string_free(msgstr, TRUE);
   return PURPLE_CMD_RET_OK;
 }
-
 
 static PurpleCmdId mstatus;
 
@@ -217,7 +188,6 @@ LoadPlugin(PurplePlugin *plugin)
 	PurpleCmdFlag flags = PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT |	PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS;
 	mstatus = purple_cmd_register("m", "w", PURPLE_CMD_P_PLUGIN, flags, NULL,
 							PURPLE_CMD_FUNC(SetStatus), NULL, NULL);
-	trace("Start logging");
 	return TRUE;
 }
 
@@ -241,7 +211,8 @@ static PurplePluginInfo info = {
     "IRC mStatus",
     "1.0",
     "IRC Music status plugin",          
-    "IRC Music status plugin",          
+    "IRC Music status plugin. Shows that you're \
+				listening to in the form of the command \"/me is now listening to <track> — <artist> [rhythmbox]\"",          
     "Dmitry <admin@itmages.ru>",                          
     "http://code.google.com/p/mStatus/",     
     LoadPlugin,                   
@@ -263,9 +234,3 @@ init_plugin(PurplePlugin *plugin)
 }
 
 PURPLE_INIT_PLUGIN(PLUGIN_ID, init_plugin, info)
-
-
-
-
-
-
