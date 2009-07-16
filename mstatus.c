@@ -212,8 +212,7 @@ static PurplePluginInfo info = {
     "1.0",
     "IRC Music status plugin",          
     "IRC Music status plugin. Shows that you're \
-				listening to in the form of the command \"/me is now listening to <track> — <artist> [rhythmbox]\" \
-				just type \"/m\"",          
+				listening to in the form of the command \"/me is now listening to <track> — <artist> [rhythmbox]\" just type \"/m\"",          
     "Dmitry <admin@itmages.ru>",                          
     "http://code.google.com/p/mStatus/",     
     LoadPlugin,                   
