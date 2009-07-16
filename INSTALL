@@ -1,0 +1,7 @@
+Basic Installation
+==================
+		make
+		make install
+
+The plugin will be installed in the directory ~/.purple/plugins
+directory ~/.purple/plugins should be created!
